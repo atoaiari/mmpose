@@ -2,7 +2,7 @@
 
 import os
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"   # see issue #152
-os.environ["CUDA_VISIBLE_DEVICES"]="2"
+os.environ["CUDA_VISIBLE_DEVICES"]="3"
 
 import copy
 import os
@@ -45,8 +45,9 @@ def covert_keypoint_definition(keypoints, pose_det_dataset, pose_lift_dataset):
         keypoints_new[0] = (keypoints[11] + keypoints[12]) / 2
         # thorax is in the middle of l_shoulder and r_shoulder
         keypoints_new[8] = (keypoints[5] + keypoints[6]) / 2
-        # head is in the middle of l_eye and r_eye
-        keypoints_new[10] = (keypoints[1] + keypoints[2]) / 2
+        # head is in the middle of l_eye and r_eye // I use ears instead
+        # keypoints_new[10] = (keypoints[1] + keypoints[2]) / 2
+        keypoints_new[10] = (keypoints[3] + keypoints[4]) / 2
         # spine is in the middle of thorax and pelvis
         keypoints_new[7] = (keypoints_new[0] + keypoints_new[8]) / 2
         # rearrange other keypoints
@@ -172,6 +173,9 @@ def main():
     pose_det_results_list = []
     next_id = 0
     pose_det_results = []
+
+    all_frames_results_vis = []
+
     for frame in video:
         pose_det_results_last = pose_det_results
 
@@ -284,6 +288,9 @@ def main():
             res['track_id'] = instance_id
             pose_lift_results_vis.append(res)
 
+
+        all_frames_results_vis.append(pose_lift_results_vis)
+
         # Visualization
         if num_instances < 0:
             num_instances = len(pose_lift_results_vis)
@@ -306,6 +313,8 @@ def main():
 
     if save_out_video:
         writer.release()
+
+    np.save(osp.join(args.out_video_root, f'pose_{osp.splitext(osp.basename(args.video_path))[0]}.npy'), all_frames_results_vis, allow_pickle=True)
 
 
 if __name__ == '__main__':
