@@ -96,6 +96,30 @@ def collate_metrics(keys):
     return used_metrics, metric_idx
 
 
+def collect_paper_readme():
+    """Collect paper readme files for collections.
+
+    Returns:
+        dict: collection name to corresponding paper readme link.
+    """
+    link_prefix = 'https://github.com/open-mmlab/mmpose/blob/master/'
+
+    readme_files = glob.glob(osp.join('docs/en/papers/*/*.md'))
+    readme_files.sort()
+    collection2readme = {}
+
+    for readme_file in readme_files:
+        with open(readme_file) as f:
+            keyline = [
+                line for line in f.readlines() if line.startswith('<summary')
+            ][0]
+            name = re.findall(r'<a href=".*">(.*?)[ ]*\(.*\'.*\).*</a>',
+                              keyline)[0]
+            collection2readme[name] = link_prefix + readme_file
+
+    return collection2readme
+
+
 def parse_config_path(path):
     """Parse model information from the config path.
 
@@ -123,6 +147,7 @@ def parse_config_path(path):
         '2d_kpt_sview_rgb_img': '2D Keypoint',
         '2d_kpt_sview_rgb_vid': '2D Keypoint',
         '3d_kpt_sview_rgb_img': '3D Keypoint',
+        '3d_kpt_mview_rgb_img': '3D Keypoint',
         '3d_kpt_sview_rgb_vid': '3D Keypoint',
         '3d_mesh_sview_rgb_img': '3D Mesh',
         None: None
@@ -148,10 +173,12 @@ def parse_md(md_file):
     Returns:
         Bool: If the target YAML file is different from the original.
     """
-    readme_path = osp.relpath(md_file, MMPOSE_ROOT)
 
     collection = {'Name': None, 'Paper': None}
     models = []
+
+    # get readme files
+    collection2readme = collect_paper_readme()
 
     # record the publish year of the latest paper
     paper_year = -1
@@ -187,6 +214,7 @@ def parse_md(md_file):
                 if year > paper_year:
                     collection['Paper'] = dict(Title=title, URL=url)
                     collection['Name'] = name
+                    collection['README'] = collection2readme[name]
                     paper_year = year
 
                 # get architecture
@@ -253,8 +281,6 @@ def parse_md(md_file):
                     model = {
                         'Name':
                         model_name,
-                        'README':
-                        readme_path,
                         'In Collection':
                         collection['Name'],
                         'Config':
